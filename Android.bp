@@ -25,4 +25,5 @@ android_library {
         "third_party/sl4a/src/main/**/*.java",
     ],
     manifest: "third_party/sl4a/src/main/AndroidManifest.xml",
+    sdk_version: "current",
 }
