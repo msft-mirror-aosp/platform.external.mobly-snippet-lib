@@ -16,14 +16,19 @@
 
 package com.google.android.mobly.snippet.rpc;
 
-@SuppressWarnings("serial")
-public class RpcError extends Exception {
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-    public RpcError(String message) {
-        super(message);
-    }
-
-    public RpcError(String message, Throwable cause) {
-        super(message, cause);
-    }
-}
+/**
+ * Use this annotation to mark RPC parameter as optional.
+ *
+ * <p>The parameter marked as optional has no explicit default value. {@code null} is used as
+ * default value.
+ */
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.PARAMETER)
+@Documented
+public @interface RpcOptional {}
