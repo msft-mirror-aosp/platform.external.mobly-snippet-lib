@@ -16,14 +16,12 @@
 
 package com.google.android.mobly.snippet.rpc;
 
-@SuppressWarnings("serial")
-public class RpcError extends Exception {
+/**
+ * A converter can take a String and turn it into an instance of type T (the type parameter to the
+ * converter).
+ */
+public interface TypeConverter<T> {
 
-    public RpcError(String message) {
-        super(message);
-    }
-
-    public RpcError(String message, Throwable cause) {
-        super(message, cause);
-    }
+    /** Convert a string into type T. */
+    T convert(String value);
 }
