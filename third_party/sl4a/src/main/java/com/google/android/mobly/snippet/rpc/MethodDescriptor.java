@@ -23,7 +23,9 @@ import com.google.android.mobly.snippet.manager.SnippetManager;
 import com.google.android.mobly.snippet.manager.SnippetObjectConverterManager;
 import com.google.android.mobly.snippet.util.AndroidUtil;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -33,6 +35,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.stream.IntStream;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -105,6 +108,14 @@ public final class MethodDescriptor {
     private static Object convertParameter(final JSONArray parameters, int index, Type type)
             throws JSONException, RpcError {
         try {
+            // The refelection system sometimes returns a GenericArrayType type
+            // instead of a raw type, causing issues with later type
+            // comparisons.
+            if (type instanceof GenericArrayType) {
+                Type componentType = ((GenericArrayType) type).getGenericComponentType();
+                type = Array.newInstance((Class<?>) componentType, 0).getClass();
+            }
+
             // We must handle null and numbers explicitly because we cannot magically cast them. We
             // also need to convert implicitly from numbers to bools.
             if (parameters.isNull(index)) {
@@ -131,6 +142,9 @@ public final class MethodDescriptor {
                 for (int i = 0; i < list.length(); i++) {
                     result[i] = list.getInt(i);
                 }
+                if (type == int[].class) {
+                    return Arrays.stream(result).mapToInt(Integer::intValue).toArray();
+                }
                 return result;
             } else if (type == Long[].class || type == long[].class) {
                 JSONArray list = parameters.getJSONArray(index);
@@ -138,12 +152,20 @@ public final class MethodDescriptor {
                 for (int i = 0; i < list.length(); i++) {
                     result[i] = list.getLong(i);
                 }
+                if (type == long[].class) {
+                    return Arrays.stream(result).mapToLong(Long::longValue).toArray();
+                }
                 return result;
-            } else if (type == Byte.class || type == byte[].class) {
+            } else if (type == Byte[].class || type == byte[].class) {
                 JSONArray list = parameters.getJSONArray(index);
                 byte[] result = new byte[list.length()];
                 for (int i = 0; i < list.length(); i++) {
                     result[i] = (byte) list.getInt(i);
+                }
+                if (type == Byte[].class) {
+                    return IntStream.range(0, result.length)
+                        .mapToObj(i -> result[i])
+                        .toArray(Byte[]::new);
                 }
                 return result;
             } else if (type == String[].class) {
