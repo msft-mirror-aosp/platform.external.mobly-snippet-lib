@@ -21,9 +21,6 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.ParcelUuid;
 import com.google.android.mobly.snippet.manager.SnippetObjectConverterManager;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -34,14 +31,17 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+/** Builds the result for JSON RPC. */
 public class JsonBuilder {
 
     private JsonBuilder() {}
 
-    @SuppressWarnings("unchecked")
     public static Object build(Object data) throws JSONException {
         if (data == null) {
             return JSONObject.NULL;
+        }
+        if (data instanceof Byte) {
+            return (Byte) data & 0xFF;
         }
         if (data instanceof Integer) {
             return data;
@@ -89,30 +89,13 @@ public class JsonBuilder {
         }
         if (data instanceof Map<?, ?>) {
             // TODO(damonkohler): I would like to make this a checked cast if possible.
-            return buildJsonMap((Map<String, ?>) data);
+            return buildJsonMap((Map<?, ?>) data);
         }
         if (data instanceof ParcelUuid) {
             return data.toString();
         }
-        // TODO(xpconanfan): Deprecate the following default non-primitive type builders.
-        if (data instanceof InetSocketAddress) {
-            return buildInetSocketAddress((InetSocketAddress) data);
-        }
-        if (data instanceof InetAddress) {
-            return buildInetAddress((InetAddress) data);
-        }
-        if (data instanceof URL) {
-            return buildURL((URL) data);
-        }
-        if (data instanceof byte[]) {
-            JSONArray result = new JSONArray();
-            for (byte b : (byte[]) data) {
-                result.put(b & 0xFF);
-            }
-            return result;
-        }
-        if (data instanceof Object[]) {
-            return buildJSONArray((Object[]) data);
+        if (data.getClass().isArray()) {
+            return buildJSONArray(data);
         }
         // Try with custom converter provided by user.
         Object result = SnippetObjectConverterManager.getInstance().objectToJson(data);
@@ -122,24 +105,44 @@ public class JsonBuilder {
         return data.toString();
     }
 
-    private static Object buildInetAddress(InetAddress data) {
-        JSONArray address = new JSONArray();
-        address.put(data.getHostName());
-        address.put(data.getHostAddress());
-        return address;
-    }
-
-    private static Object buildInetSocketAddress(InetSocketAddress data) {
-        JSONArray address = new JSONArray();
-        address.put(data.getHostName());
-        address.put(data.getPort());
-        return address;
-    }
-
-    private static JSONArray buildJSONArray(Object[] data) throws JSONException {
+    private static JSONArray buildJSONArray(Object data) throws JSONException {
         JSONArray result = new JSONArray();
-        for (Object o : data) {
-            result.put(build(o));
+        if (data instanceof int[]) {
+            for (int i : (int []) data) {
+                result.put(i);
+            }
+        } else if (data instanceof short[]) {
+            for (short s : (short[]) data) {
+                result.put(s);
+            }
+        } else if (data instanceof long[]) {
+            for (long l : (long[]) data) {
+                result.put(l);
+            }
+        } else if (data instanceof float[]) {
+            for (float f : (float[]) data) {
+                result.put(f);
+            }
+        } else if (data instanceof double[]) {
+            for (double d : (double[]) data) {
+                result.put(d);
+            }
+        } else if (data instanceof boolean[]) {
+            for (boolean b : (boolean[]) data) {
+                result.put(b);
+            }
+        } else if (data instanceof char[]) {
+            for (char c : (char[]) data) {
+                result.put(c);
+            }
+        } else if (data instanceof byte[]) {
+            for (byte b : (byte[]) data) {
+                result.put(b & 0xFF);
+            }
+        } else {
+            for (Object o : (Object[]) data) {
+                result.put(build(o));
+            }
         }
         return result;
     }
@@ -177,25 +180,13 @@ public class JsonBuilder {
         return result;
     }
 
-    private static JSONObject buildJsonMap(Map<String, ?> map) throws JSONException {
+    private static JSONObject buildJsonMap(Map<?, ?> map) throws JSONException {
         JSONObject result = new JSONObject();
-        for (Entry<String, ?> entry : map.entrySet()) {
-            String key = entry.getKey();
-            if (key == null) {
-                key = "";
-            }
-            result.put(key, build(entry.getValue()));
+        for (Entry<?, ?> entry : map.entrySet()) {
+            Object key = entry.getKey();
+            String keyStr = key == null ? "" : key.toString();
+            result.put(keyStr, build(entry.getValue()));
         }
         return result;
-    }
-
-    private static Object buildURL(URL data) throws JSONException {
-        JSONObject url = new JSONObject();
-        url.put("Authority", data.getAuthority());
-        url.put("Host", data.getHost());
-        url.put("Path", data.getPath());
-        url.put("Port", data.getPort());
-        url.put("Protocol", data.getProtocol());
-        return url;
     }
 }
